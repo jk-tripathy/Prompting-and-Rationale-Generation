@@ -1,6 +1,5 @@
 from data.load_PCL import load_binary, load_multi
-from pipeline import local_inf
-import json
+from txt_pipeline import text_pipeline
 
 def split_data(df):
     if df['label'].dtype != object:
@@ -44,7 +43,7 @@ if __name__=='__main__':
         "Prompt: Arshad said that besides learning many new aspects of sports leadership he learnt how fast-developing nations were using sports as a tool of development and in this effort the disabled and the underprivileged were not left behind at any stage . Is this Patronizing?\nAnswer: Yes.",
         "Prompt: He added that the AFP will continue to bank on the application of the whole of nation -- whole of government approach , which involves the use of sustainable and peaceful engagements with vulnerable communities to protect them from further NPA exploitation . Is this Patronizing?\nAnswer: "
     ]
-    resp = local_inf(model_id, prompt, max_new_tokens=1, batch_size=1)
+    resp = text_pipeline(model_id, prompt, max_new_tokens=1, batch_size=1)
     print(resp)
     
 

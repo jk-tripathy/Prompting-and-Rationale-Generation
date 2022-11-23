@@ -122,7 +122,7 @@ class DontPatronizeMe:
 		self.test_set_df = pd.DataFrame(rows, columns="par_id art_id keyword country text".split())
 
 def load_binary():
-    dpm = DontPatronizeMe('data/PCL', 'dontpatronizeme_pcl.tsv')
+    dpm = DontPatronizeMe('Stage1/data/PCL', 'dontpatronizeme_pcl.tsv')
     # This method loads the subtask 1 data
     dpm.load_task1()
     # which we can then access as a dataframe
@@ -131,7 +131,7 @@ def load_binary():
     return df
 
 def load_multi():
-    dpm = DontPatronizeMe('data/PCL', 'dontpatronizeme_pcl.tsv')
+    dpm = DontPatronizeMe('Stage1/data/PCL', 'dontpatronizeme_pcl.tsv')
     # This method loads the subtask 1 data
     dpm.load_task2()
     # which we can then access as a dataframe
