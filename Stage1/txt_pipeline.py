@@ -2,7 +2,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from transformers import pipeline
 
 
-def text_pipeline(model_id, prompts, temperature=0.7, max_new_tokens=32, do_sample=False, batch_size=5):
+def text_pipeline(model_id, prompts, temperature=0.7, max_new_tokens=32, do_sample=False, batch_size=8):
     model = AutoModelForCausalLM.from_pretrained(model_id, device_map="auto", offload_folder="offload")
     tokenizer = AutoTokenizer.from_pretrained(model_id, padding_side='left')
     tokenizer.pad_token = tokenizer.eos_token
