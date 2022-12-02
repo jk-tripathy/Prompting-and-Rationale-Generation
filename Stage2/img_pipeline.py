@@ -1,8 +1,4 @@
-from transformers import AutoFeatureExtractor, AutoModelForImageClassification, AutoModelForObjectDetection
-import torch
-from PIL import Image
-import requests
-from transformers import pipeline
+from transformers import pipeline, AutoFeatureExtractor, AutoModelForImageClassification, AutoModelForObjectDetection, AutoModelForVision2Seq, AutoTokenizer
 
 def image_pipeline(image, model_id, task):
     feature_extractor = AutoFeatureExtractor.from_pretrained(model_id)
@@ -10,26 +6,23 @@ def image_pipeline(image, model_id, task):
         model = AutoModelForObjectDetection.from_pretrained(model_id)
     elif task == 'image-classification':
         model = AutoModelForImageClassification.from_pretrained(model_id)
+    elif task == 'image-to-text':
+        model = AutoModelForVision2Seq.from_pretrained(model_id)
+        tokenizer = AutoTokenizer.from_pretrained(model_id)
+
     pipe = pipeline(
         task,
-        model=model,
-        feature_extractor=feature_extractor,
+        model = model,
+        feature_extractor = feature_extractor,
+        tokenizer = tokenizer if task == 'image-to-text' else None,
     )
     results = pipe(image)
     return results
 
 if __name__=='__main__':
     image = 'https://farm4.staticflickr.com/3253/2605202065_d1bcaa15b3_z.jpg'
-    image2 = 'http://farm9.staticflickr.com/8357/8311566234_48993d3629_z.jpg'
-    model_id = "vincentclaes/mit-indoor-scenes"
-    task = 'image-classification'
+    model_id = 'nlpconnect/vit-gpt2-image-captioning' 
+    task = 'image-to-text'
 
-    results = image_pipeline(image2, model_id, task)
+    results = image_pipeline(image, model_id, task)
     print(results)
-
-    #for item in results:
-        #if item['score'] > 0.9:
-            #print(
-                #f"Detected {item['label']} with confidence "
-                #f"{round(item['score'], 2)} at location {item['box']}"
-            #)
