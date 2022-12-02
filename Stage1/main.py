@@ -1,3 +1,5 @@
+import sys
+sys.path.insert(0, "../")
 from data.load_PCL import load_binary, load_multi
 from txt_pipeline import text_pipeline
 
@@ -27,7 +29,7 @@ def prompt_gen(dfs, class_dict, prompt_len=1, val_len=1):
     return prompts
         
 if __name__=='__main__':
-    df = load_binary()
+    df = load_binary('../data/PCL')
     df_split = split_data(df)
     model_id = 'EleutherAI/gpt-j-6B'
     #for i in [1, 2, 5, 10, 15, 20]:

@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0, "../Stage1")
+sys.path.insert(0, "../")
 from txt_pipeline import text_pipeline
 from img_pipeline import image_pipeline
 
@@ -9,7 +9,7 @@ if __name__=='__main__':
     image_tasks = ['object-detection', 'image-classification', 'image-classification']
     urls = [
         'https://farm4.staticflickr.com/3253/2605202065_d1bcaa15b3_z.jpg',
-        'https://farm2.staticflickr.com/1229/1430469166_ebbb5f7b73_z.jpg',
+            'https://farm2.staticflickr.com/1229/1430469166_ebbb5f7b73_z.jpg',
     ]
 
     test_urls = [
