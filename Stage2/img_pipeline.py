@@ -23,7 +23,7 @@ warnings.filterwarnings("ignore")
 
 class ImagePipelines:
     def __init__(self) -> None:
-        self.tasks = ['object detection', 'indoor scene', 'outdoor scene', 'facial emotion', 'caption']
+        self.tasks = ['image type', 'object detection', 'indoor scene', 'outdoor scene', 'facial emotion', 'caption']
         #huggging face models
         # object detection
         self.object_model_id = 'facebook/detr-resnet-101'
@@ -93,6 +93,10 @@ class ImagePipelines:
                 classes.append(line.strip().split(' ')[0][3:])
         self.places365_classes = tuple(classes)
 
+        #clip
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.clip_model, self.clip_preprocess = clip.load("ViT-L/14", device=device)
+
     def outdoor_pipe(self, image_path):
         # load the test image
         img = Image.open(image_path)
@@ -110,6 +114,19 @@ class ImagePipelines:
 
         return results
     
+    def image_type_pipe(self, image_path):
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        image = self.clip_preprocess(Image.open(image_path)).unsqueeze(0).to(device)
+        image_types = ["This is a image", "This is a sketch", "This is a cartoon", "This is a painting"] 
+        text = clip.tokenize(image_types).to(device)
+
+        with torch.no_grad():
+            logits_per_image, logits_per_text = self.clip_model(image, text)
+            probs = logits_per_image.softmax(dim=-1).cpu().numpy()
+    
+        result = {'output': [{'score': float(score), 'label': label} for score, label in zip(probs[0], image_types)]}
+        return result
+        
     def get_results(self, image_path, task_label): 
         if task_label == 'object detection':
             return self.object_pipe(image_path)
@@ -121,24 +138,11 @@ class ImagePipelines:
             return self.emotion_pipe(image_path)
         elif task_label == 'caption':
             return self.caption_pipe(image_path)
+        elif task_label == 'image type':
+            return self.image_type_pipe(image_path)
 
 if __name__=='__main__':
     path_to_image = '../data/MAMI/images/28.jpg'
     image_models = ImagePipelines()
     result = image_models.get_results(path_to_image, task_label='caption') 
     print(result)
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    model, preprocess = clip.load("ViT-L/14", device=device)
-
-    image = preprocess(Image.open(path_to_image)).unsqueeze(0).to(device)
-    image_types = ["This is a image", "This is a sketch", "This is a cartoon", "This is a painting"] 
-    text = clip.tokenize(image_types).to(device)
-
-    with torch.no_grad():
-        image_features = model.encode_image(image)
-        text_features = model.encode_text(text)
-
-        logits_per_image, logits_per_text = model(image, text)
-        probs = logits_per_image.softmax(dim=-1).cpu().numpy()
-    
-    print("Label probs:", probs)
