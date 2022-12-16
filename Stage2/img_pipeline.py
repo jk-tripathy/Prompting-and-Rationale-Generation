@@ -8,6 +8,7 @@ from torchvision import transforms as trn
 from torch.nn import functional as F
 from PIL import Image
 import clip
+from facenet_pytorch import MTCNN, InceptionResnetV1
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -23,7 +24,7 @@ warnings.filterwarnings("ignore")
 
 class ImagePipelines:
     def __init__(self) -> None:
-        self.tasks = ['image type', 'object detection', 'indoor scene', 'outdoor scene', 'facial emotion', 'caption']
+        self.tasks = ['image type', 'object detection', 'indoor scene', 'outdoor scene', 'face', 'caption']
         #huggging face models
         # object detection
         self.object_model_id = 'facebook/detr-resnet-101'
@@ -97,6 +98,9 @@ class ImagePipelines:
         device = "cuda" if torch.cuda.is_available() else "cpu"
         self.clip_model, self.clip_preprocess = clip.load("ViT-L/14", device=device)
 
+        #mtcnn - face detection
+        self.mtcnn = MTCNN()
+
     def outdoor_pipe(self, image_path):
         # load the test image
         img = Image.open(image_path)
@@ -108,9 +112,9 @@ class ImagePipelines:
         probs, idx = h_x.sort(0, True)
 
         # output the prediction
-        results = {'output' : []}
+        results = []
         for i in range(0, 5):
-            results['output'].append({'score': probs[i].item(), 'label': self.places365_classes[idx[i]]})
+            results.append({'score': probs[i].item(), 'label': self.places365_classes[idx[i]]})
 
         return results
     
@@ -124,9 +128,31 @@ class ImagePipelines:
             logits_per_image, logits_per_text = self.clip_model(image, text)
             probs = logits_per_image.softmax(dim=-1).cpu().numpy()
     
-        result = {'output': [{'score': float(score), 'label': label} for score, label in zip(probs[0], image_types)]}
+        result = [{'score': float(score), 'label': label} for score, label in zip(probs[0], image_types)]
         return result
         
+    def face_pipe(self, image_path):
+        result = []
+        img = Image.open(image_path)
+        bb, score = self.mtcnn.detect(img)
+        if bb is not None and score is not None:
+            for score, bb in zip(score, bb):
+                cropped_img = img.crop(bb)
+                emotion = self.emotion_pipe(cropped_img)
+                result.append({
+                    'detection': {
+                        'score' : float(score),
+                        'box' : {
+                            'xmin': float(bb[0]),
+                            'ymin': float(bb[1]),
+                            'xmax': float(bb[2]),
+                            'ymax': float(bb[3]),
+                        },
+                    },
+                    'emotion' : emotion,
+                })
+        return result
+
     def get_results(self, image_path, task_label): 
         if task_label == 'object detection':
             return self.object_pipe(image_path)
@@ -134,15 +160,17 @@ class ImagePipelines:
             return self.indoor_pipe(image_path)
         elif task_label == 'outdoor scene':
             return self.outdoor_pipe(image_path)
-        elif task_label == 'facial emotion':
-            return self.emotion_pipe(image_path)
+        elif task_label == 'face':
+            return self.face_pipe(image_path)
         elif task_label == 'caption':
             return self.caption_pipe(image_path)
         elif task_label == 'image type':
             return self.image_type_pipe(image_path)
 
 if __name__=='__main__':
-    path_to_image = '../data/MAMI/images/28.jpg'
+    image_path = '../data/MAMI/images/58.jpg'
     image_models = ImagePipelines()
-    result = image_models.get_results(path_to_image, task_label='caption') 
+    result = image_models.get_results(image_path, task_label='face') 
     print(result)
+
+    # If required, create a face detection pipeline using MTCNN:
