@@ -77,7 +77,7 @@ class ImagePipelines:
         # places365 - outdoor scene
 
         # load the pre-trained weights
-        model_file = 'resnet50_places365.pth.tar'
+        model_file = 'Stage2/resnet50_places365.pth.tar'
         self.places365_model = models.__dict__['resnet50'](num_classes=365)
         checkpoint = torch.load(model_file, map_location= torch.device(f'cuda:{device}'))
         state_dict = {str.replace(k, 'module.', ''): v for k, v in checkpoint['state_dict'].items()}
@@ -92,7 +92,7 @@ class ImagePipelines:
         ])
 
         # load the class label
-        file_name = 'categories_places365.txt'
+        file_name = 'Stage2/categories_places365.txt'
         classes = list()
         with open(file_name) as class_file:
             for line in class_file:

@@ -1,7 +1,8 @@
 offload/
-Stage2/venv/
+venv/
 Stage2/categories_places365.txt
 Stage2/resnet50_places365.pth.tar
 **/__pycache__/
 __pycache__/
 .vscode/
+data/
