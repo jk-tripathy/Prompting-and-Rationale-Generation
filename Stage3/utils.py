@@ -1,14 +1,19 @@
 def get_visual_tags(entry):
-    tags = ''
-    face_count = 0
 
-    if 'image type' in entry:
-        for i in entry['image type']:
+
+    tags = ''
+
+    if 'image_type' in entry:
+        for i in entry['image_type']:
             if i['score'] >= 0.8:
                 tags += i['label'] + ' with '
 
+
+
+
     if 'face' in entry:
 
+        face_count = 0
         emotions = set()
 
         for i in entry['face']:
@@ -37,10 +42,10 @@ def get_visual_tags(entry):
                 for e in emotions:
                     tags += ' '+e+' '
 
-    if 'object detection' in entry:
+    if 'object_detection' in entry:
         objects = set()
 
-        for o in entry['object detection']:
+        for o in entry['object_detection']:
             if o['score'] >= 0.9:
                 if o['label'] == 'person' and face_count > 0:
                     continue
@@ -57,8 +62,8 @@ def get_visual_tags(entry):
                 tags += o.replace('_', ' ')+', '
 
     scenes = ''
-    if 'indoor scene' in entry:
-        for i in entry['indoor scene']:
+    if 'indoor_scene' in entry:
+        for i in entry['indoor_scene']:
             if i['score'] >= 0.8:
                 scenes += i['label'].replace('_', ' ').replace('/', ', ') + ', '
 
@@ -71,6 +76,4 @@ def get_visual_tags(entry):
 
     if scenes != '':
         tags += ' ' + scenes
-    tags = tags.strip()
-    return tags
-
+    return tags.strip()

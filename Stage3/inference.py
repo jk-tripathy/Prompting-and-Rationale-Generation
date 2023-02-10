@@ -40,7 +40,7 @@ def get_rationale(model, tokenizer, prompt, ans):
 
 if __name__ == "__main__":
     val_x = None
-    with open('Stage3/val_x.json') as f:
+    with open('data/mscoco/val_x.json') as f:
         val_x = json.load(f)
     
     image_models = ImagePipelines()
@@ -52,7 +52,6 @@ if __name__ == "__main__":
     results = {}
     img_path = os.path.join('data/mscoco/val2014', image_name)
     for task_label in image_models.tasks:
-        # print(f'Processing {task_label}')
         result = image_models.get_results(img_path, task_label)
         results[task_label] = result
 
@@ -68,16 +67,16 @@ if __name__ == "__main__":
         
     prompt_header = "Answer the following questions based on the image context given.\n"
 
-    for i in tqdm(range(1, 1001)):
+    for i in tqdm(range(1, 101)):
         image_name = val_x[i]["img_id"] + '.jpg'
         results = {}
         img_path = os.path.join('data/mscoco/val2014', image_name)
         for task_label in image_models.tasks:
-            # print(f'Processing {task_label}')
             result = image_models.get_results(img_path, task_label)
             results[task_label] = result
 
         visual_tags = get_visual_tags(results)
+
         ques = val_x[i]["sent"]
         gold_answer = max(val_x[i]["label"], key=val_x[i]["label"].get)
         gold_rationale = val_x[i]["explanation"]
@@ -94,6 +93,7 @@ if __name__ == "__main__":
         rationale = get_rationale(model, tokenizer, prompt, ans)
     
         gen_results = {
+                'okvqa_q_id': val_x[i]['question_id'],
                 'img_id': image_name,
                 'visual_tags': visual_tags,
                 'question': ques,
@@ -103,7 +103,7 @@ if __name__ == "__main__":
                 'rationale': rationale,
                 }
 
-        with open('Stage3/without_rationale_provided.jsonl', 'a') as f:
+        with open('Stage3/flant5-imctx-okvqa-100.jsonl', 'a') as f:
             json.dump(gen_results, f)
             f.write('\n')
 
