@@ -1,89 +1,114 @@
 import os
 import json
+import pandas as pd
 from utils import *
 from tqdm import tqdm
+from get_vis_tags import get_visual_tags
 from Stage2.img_pipeline import ImagePipelines
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 
-def make_prompt(visual_tags, question, answer, rationale=None, isTrain=True):
-    prompt = f"Image Context: {visual_tags}\n"
-    prompt += f"Question: {question}\n"
-    if isTrain:
-        if rationale:
-            prompt += f"Rationale: {rationale}\n"
-            
-        prompt += f"Answer: {answer}\n"
-    else: 
-        prompt += "Answer: "
-
-    return prompt
-
-def gen_text(model, tokenizer, prompt):
-    input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to("cuda")
-    
-    outputs = model.generate(input_ids)
-    res = str(tokenizer.decode(outputs[0]))
-    trunc_res = res[6:-4]
-    return trunc_res
-
-def get_ans(model, tokenizer, prompt_header, train_prompt, test_prompt):
-    prompt = prompt_header + "\n" + train_prompt + "\n" + test_prompt
-    ans = gen_text(model, tokenizer, prompt)
-    return prompt, ans
-
-def get_rationale(model, tokenizer, prompt, ans):
-    prompt += f"{ans}\n"
-    prompt +="Explain the rationale behind the answer:"
-    rationale = gen_text(model, tokenizer, prompt)
-    return rationale
-
-
-if __name__ == "__main__":
-    val_x = None
-    with open('data/mscoco/val_x.json') as f:
-        val_x = json.load(f)
-    
+def image_infer(infer_dict_list, data_path, save_path, model_name="google/flan-t5-xxl", train_num=1, infer_num=100):
     image_models = ImagePipelines()
+    tokenizer = T5Tokenizer.from_pretrained(model_name)
+    model = T5ForConditionalGeneration.from_pretrained(model_name, device_map="auto")
+    prompt_header = "Answer the following questions based on the given image context\n"
 
-    tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-xxl")
-    model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-xxl", device_map="auto")
+    train_prompt = ''
 
-    image_name = val_x[0]["img_id"] + '.jpg'
-    results = {}
-    img_path = os.path.join('data/mscoco/val2014', image_name)
-    for task_label in image_models.tasks:
-        result = image_models.get_results(img_path, task_label)
-        results[task_label] = result
-
-    visual_tags = "This is a image with  person,  boat, kite," #get_visual_tags(results)
-
-    train_prompt = make_prompt(
-            visual_tags,
-            val_x[0]["sent"],
-            max(val_x[0]["label"], key=val_x[0]["label"].get),
-            isTrain=True
-            )
-    
-        
-    prompt_header = "Answer the following questions based on the image context given.\n"
-
-    for i in tqdm(range(1, 101)):
-        image_name = val_x[i]["img_id"] + '.jpg'
-        results = {}
-        img_path = os.path.join('data/mscoco/val2014', image_name)
-        for task_label in image_models.tasks:
-            result = image_models.get_results(img_path, task_label)
-            results[task_label] = result
+    # train prompts
+    for i in range(train_num):
+        image_name = infer_dict_list[i]["img_id"] + '.jpg'
+        img_path = os.path.join(data_path, image_name)
+        results = image_models.get_results(img_path)
 
         visual_tags = get_visual_tags(results)
 
-        ques = val_x[i]["sent"]
-        gold_answer = max(val_x[i]["label"], key=val_x[i]["label"].get)
-        gold_rationale = val_x[i]["explanation"]
+        ques = infer_dict_list[i]["question"]
+        gold_answer = infer_dict_list[i]["answer"]
+        gold_rationale = infer_dict_list[i]["rationale"][0]
+        choices = infer_dict_list[i]["choices"]
+
+        train_prompt = make_prompt(
+                ques,
+                gold_answer,
+                visual_tags=visual_tags,
+                train_prompt=train_prompt,
+                choices=choices,
+                isTrain=True,
+                rationale=gold_rationale,
+                )
+
+    # inference
+    for i in tqdm(range(train_num, train_num+infer_num)):
+        image_name = infer_dict_list[i]["img_id"] + '.jpg'
+        img_path = os.path.join(data_path, image_name)
+        results = image_models.get_results(img_path)
+
+        visual_tags = get_visual_tags(results)
+
+        ques = infer_dict_list[i]["question"]
+        gold_answer = infer_dict_list[i]["answer"]
+        gold_rationale = infer_dict_list[i]["rationale"]
+        choices = infer_dict_list[i]["choices"]
 
         test_prompt = make_prompt(
-                visual_tags,
                 ques,
+                gold_answer,
+                visual_tags=visual_tags,
+                choices=choices,
+                isTrain=False
+                )
+
+        prompt, ans = get_ans(model, tokenizer, prompt_header, train_prompt, test_prompt)
+
+        rationale = get_rationale(model, tokenizer, prompt, ans)
+    
+        gen_results = {
+                'ques_id': infer_dict_list[i]['question_id'],
+                'img_id': infer_dict_list[i]['img_id'],
+                'visual_tags': visual_tags,
+                'question': ques,
+                'gold_answer': gold_answer,
+                'answer': ans,
+                'gold_rationale': gold_rationale,
+                'rationale': rationale,
+                }
+
+        with open(save_path, 'a') as f:
+            json.dump(gen_results, f)
+            f.write('\n')
+
+def senmaking_infer(save_path, model_name="google/flan-t5-xxl", train_num=1, infer_num=100):
+    statements = pd.read_csv('data/sen_making/All data/Dev Data/subtaskA_dev_data.csv')
+    answers = pd.read_csv('data/sen_making/All data/Dev Data/subtaskA_gold_answers.csv', header=None)
+    rationales = pd.read_csv('data/sen_making/All data/Dev Data/subtaskC_gold_answers.csv', header=None)
+
+    tokenizer = T5Tokenizer.from_pretrained(model_name)
+    model = T5ForConditionalGeneration.from_pretrained(model_name, device_map="auto")
+    prompt_header = "Which statement of the two is against common sense?\n"
+
+    # train promtps
+    train_prompt = ""
+    for i in range(train_num):
+        concat = "\n1. " + statements.iloc[i]['sent0'] + "\n2. " + statements.iloc[i]['sent1']
+        gold_answer = str(answers.iloc[i][1] + 1)
+        gold_rationale = rationales.iloc[i][1:5].tolist()
+        train_prompt = make_prompt(
+                concat,
+                gold_answer,
+                train_prompt=train_prompt,
+                isTrain=True,
+                rationale=gold_rationale[0]
+                )
+    
+    #infer
+    for i in tqdm(range(train_num, train_num+infer_num)):
+        concat = "\n1. " + statements.iloc[i]['sent0'] + "\n2. " + statements.iloc[i]['sent1']
+        gold_answer = str(answers.iloc[i][1] + 1)
+        gold_rationale = rationales.iloc[i][1:5].tolist()
+
+        test_prompt = make_prompt(
+                concat,
                 gold_answer,
                 isTrain=False
                 )
@@ -93,36 +118,92 @@ if __name__ == "__main__":
         rationale = get_rationale(model, tokenizer, prompt, ans)
     
         gen_results = {
-                'okvqa_q_id': val_x[i]['question_id'],
-                'img_id': image_name,
-                'visual_tags': visual_tags,
-                'question': ques,
+                'ques_id': str(statements.iloc[i]['id']),
+                'question': concat,
                 'gold_answer': gold_answer,
                 'answer': ans,
                 'gold_rationale': gold_rationale,
                 'rationale': rationale,
                 }
 
-        with open('Stage3/flant5-imctx-okvqa-100.jsonl', 'a') as f:
+        with open(save_path, 'a') as f:
+            json.dump(gen_results, f)
+            f.write('\n')
+
+def esnli_infer(save_path, model_name="google/flan-t5-xxl", train_num=1, infer_num=100):
+    df = pd.read_csv('data/esnli/dataset/esnli_dev.csv')
+    df = df[['pairID', 'gold_label', 'Sentence1', 'Sentence2', 'Explanation_1']]
+
+    tokenizer = T5Tokenizer.from_pretrained(model_name)
+    model = T5ForConditionalGeneration.from_pretrained(model_name, device_map="auto")
+    prompt_header = "What is the relation between the two sentences.\nPossible answers are: contradiction, entailment, neutral.\n"
+
+    # train promtps
+    train_prompt = ""
+    for i in range(train_num):
+        concat = "\n1. " + df.iloc[i]['Sentence1'] + "\n2. " + df.iloc[i]['Sentence2']
+        gold_answer = df.iloc[i]['gold_label']
+        train_prompt = make_prompt(
+                concat,
+                gold_answer,
+                train_prompt=train_prompt,
+                isTrain=True
+                )
+    
+    #infer
+    for i in tqdm(range(train_num, train_num+infer_num)):
+        concat = "\n1. " + df.iloc[i]['Sentence1'] + "\n2. " + df.iloc[i]['Sentence2']
+        gold_answer = str(df.iloc[i]['gold_label'])
+        gold_rationale = str(df.iloc[i]['Explanation_1'])
+
+        test_prompt = make_prompt(
+                concat,
+                gold_answer,
+                isTrain=False
+                )
+
+        prompt, ans = get_ans(model, tokenizer, prompt_header, train_prompt, test_prompt)
+        rationale = get_rationale(model, tokenizer, prompt, ans)
+    
+        gen_results = {
+                'ques_id': str(df.iloc[i]['pairID']),
+                'question': concat,
+                'gold_answer': gold_answer,
+                'answer': ans,
+                'gold_rationale': gold_rationale,
+                'rationale': rationale,
+                }
+
+        with open(save_path, 'a') as f:
             json.dump(gen_results, f)
             f.write('\n')
 
 
+if __name__ == "__main__":
+    train_num = 1
+    infer_num = 100
 
+    # OKVQA 
 
+    okvqa_data_path = 'data/mscoco/val2014'
+    okvqa_save_path = 'Stage3/okvqa-flant5-imctx-100-rationale.jsonl'
+    okvqa_list = preproc_okvqa('data/mscoco/okvqa/okvqa_val.json', train_num, infer_num)
+    image_infer(okvqa_list, okvqa_data_path, okvqa_save_path, train_num=train_num, infer_num=infer_num)
 
+    # AOKVQA 
+    
+    aokvqa_data_path = 'data/mscoco/val2017'
+    aokvqa_save_path = 'Stage3/aokvqa-flant5-imctx-100-rationale.jsonl'
+    aokvqa_list = preproc_aokvqa('data/mscoco/aokvqa/aokvqa_v1p0_val.json', train_num, infer_num)
+    image_infer(aokvqa_list, aokvqa_data_path, aokvqa_save_path, train_num=train_num, infer_num=infer_num)
 
+    # SEN-MAKING
 
+    senmaking_save_path = 'Stage3/senmaking-flant5-100-rationale.jsonl'
+    senmaking_infer(senmaking_save_path)
 
+    # e-SNLI
 
-
-
-
-
-
-
-
-
-
-
+    esnli_save_path = 'Stage3/esnli-flant5-100-rationale.jsonl'
+    esnli_infer(esnli_save_path)
 

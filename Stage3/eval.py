@@ -1,12 +1,7 @@
 import json
 from evaluate import load
 
-if __name__ == "__main__":
-    
-    with open('Stage3/flant5-imctx-okvqa-100.jsonl', 'r') as json_file:
-        json_list = list(json_file)
-    
-    
+def eval(json_list):
     label_preds = []
     label_gold = []
     rationale_preds = []
@@ -34,3 +29,9 @@ if __name__ == "__main__":
     print(f'ROUGE: {rouge_res["rougeL"]}')
     print(f'METEOR: {meteor_res["meteor"]}')
 
+
+if __name__ == "__main__":
+    file_path = 'Stage3/esnli-flant5-100.jsonl'
+    with open(file_path, 'r') as json_file:
+        json_list = list(json_file)
+    eval(json_list)

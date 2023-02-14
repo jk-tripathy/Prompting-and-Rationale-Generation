@@ -1,79 +1,93 @@
-def get_visual_tags(entry):
+import json
 
+def make_prompt(
+        question,
+        answer,
+        visual_tags=None,
+        train_prompt=None,
+        choices=None,
+        rationale=None,
+        isTrain=True,
+        ):
+    prompt = ""
 
-    tags = ''
+    if train_prompt:
+        prompt += train_prompt + "\n"
 
-    if 'image_type' in entry:
-        for i in entry['image_type']:
-            if i['score'] >= 0.8:
-                tags += i['label'] + ' with '
+    if visual_tags:
+        prompt += f"Image Context: {visual_tags}\n"
 
+    prompt += f"Question: {question}\n"
 
+    if choices:
+        prompt += "Choices: "
+        for choice in choices:
+            prompt += choice + ", "
+        prompt += "\n"
 
+    if isTrain:
+        prompt += f"Answer: {answer}\n"
+    else: 
+        prompt += "Answer: "
 
-    if 'face' in entry:
+    if rationale:
+        prompt += f"Rationale: {rationale}\n"
 
-        face_count = 0
-        emotions = set()
+    return prompt
 
-        for i in entry['face']:
+def gen_text(model, tokenizer, prompt):
+    input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to("cuda")
+    
+    outputs = model.generate(input_ids)
+    res = str(tokenizer.decode(outputs[0]))
+    trunc_res = res[6:-4]
+    return trunc_res
 
-            if i['detection']['score'] >= 0.9:
-                face_count += 1
-                max_emotion = ''
-                max_score = 0
+def get_ans(model, tokenizer, prompt_header, train_prompt, test_prompt):
+    prompt = prompt_header + "\n" + train_prompt + "\n" + test_prompt
+    ans = gen_text(model, tokenizer, prompt)
+    return prompt, ans
 
-                for emotion in i['emotion']:
-                    if emotion['score'] > max_score:
-                        max_emotion = emotion['label']
-                        max_score = emotion['score']
+def get_rationale(model, tokenizer, prompt, ans):
+    prompt += f"{ans}\n"
+    prompt +="Explain the rationale behind the answer:"
+    rationale = gen_text(model, tokenizer, prompt)
+    return rationale
 
-                if max_score >= 0.5:
-                    emotions.add(max_emotion)
+def preproc_okvqa(val_path, train_num, infer_num):
+    val_jsonl = None
+    with open(val_path) as f:
+        val_jsonl = json.load(f)
+    
+    preproc_list = []
+    for item in val_jsonl[:train_num+infer_num]:
+        temp = {}
+        temp['question_id'] = item['question_id']
+        temp['img_id'] = item['img_id']
+        temp['question'] = item['sent']
+        temp['choices'] = None
+        temp['answer'] = max(item['label'], key=item['label'].get)
+        temp['rationale'] = item['explanation']
 
-        if face_count > 0:
-            if face_count == 1:
-                tags += str(face_count) + ' person, '
-            else:
-                tags += str(face_count) + ' people, '
+        preproc_list.append(temp)
 
-            if len(emotions) > 0:
-                tags += ' with facial expression: '
-                for e in emotions:
-                    tags += ' '+e+' '
+    return preproc_list
+        
+def preproc_aokvqa(val_path, train_num, infer_num):
+    val_jsonl = None
+    with open(val_path) as f:
+        val_jsonl = json.load(f)
+    
+    preproc_list = []
+    for item in val_jsonl[:train_num+infer_num]:
+        temp = {}
+        temp['question_id'] = item['question_id']
+        temp['img_id'] = str(item['image_id']).rjust(12, "0")
+        temp['question'] = item['question']
+        temp['choices'] = item['choices']
+        temp['answer'] = item['choices'][item['correct_choice_idx']]
+        temp['rationale'] = item['rationales']
 
-    if 'object_detection' in entry:
-        objects = set()
+        preproc_list.append(temp)
 
-        for o in entry['object_detection']:
-            if o['score'] >= 0.9:
-                if o['label'] == 'person' and face_count > 0:
-                    continue
-                else:
-                    objects.add(o['label'])
-
-        if 'person' in objects:
-            tags += ' person, '
-            objects.remove('person')
-
-        if len(objects) > 0:
-            tags += ' '
-            for o in objects:
-                tags += o.replace('_', ' ')+', '
-
-    scenes = ''
-    if 'indoor_scene' in entry:
-        for i in entry['indoor_scene']:
-            if i['score'] >= 0.8:
-                scenes += i['label'].replace('_', ' ').replace('/', ', ') + ', '
-
-    if 'places' in entry:
-
-        scenes = ''
-        for i in entry['places']:
-            if i['score'] >= 0.8:
-                scenes += i['label'].replace('_', ' ').replace('/', ', ') + ', '
-
-    if scenes != '':
-        tags += ' ' + scenes
-    return tags.strip()
+    return preproc_list
