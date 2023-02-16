@@ -1,0 +1,16 @@
+{"file": "senmaking-flant5-100.jsonl", "accuracy": 0.92, "bleu": 0.2034512045531842, "rouge": 0.4462202998010186, "meteor": 0.5132927763561966}
+{"file": "senmaking-flant5-100-rationale.jsonl", "accuracy": 0.92, "bleu": 0.20730619753915416, "rouge": 0.44609660583679267, "meteor": 0.5032706026885833}
+{"file": "esnli-flant5-100.jsonl", "accuracy": 0.88, "bleu": 0.14581958511588347, "rouge": 0.3491004256733945, "meteor": 0.3793676310081625}
+{"file": "esnli-flant5-100-rationale.jsonl", "accuracy": 0.88, "bleu": 0.14356442631998634, "rouge": 0.3449511446094795, "meteor": 0.378209077739794}
+{"file": "okvqa-flant5-tags-100.jsonl", "accuracy": 0.56, "bleu": 0.07375895880666981, "rouge": 0.31200395804496595, "meteor": 0.28829451786352517}
+{"file": "okvqa-flant5-tags-rationale-100.jsonl", "accuracy": 0.58, "bleu": 0.06383227884841457, "rouge": 0.2969374962375533, "meteor": 0.2541025842862794}
+{"file": "okvqa-flant5-caption-100.jsonl", "accuracy": 0.63, "bleu": 0.06563365908279739, "rouge": 0.28018324468412986, "meteor": 0.27051417191094745}
+{"file": "okvqa-flant5-caption-rationale-100.jsonl", "accuracy": 0.68, "bleu": 0.07207173069201983, "rouge": 0.2938723663542748, "meteor": 0.250718750399042}
+{"file": "okvqa-flant5-both-100.jsonl", "accuracy": 0.68, "bleu": 0.06565379308771783, "rouge": 0.3133582669636302, "meteor": 0.3042845698642068}
+{"file": "okvqa-flant5-both-rationale-100.jsonl", "accuracy": 0.66, "bleu": 0.07069478743227213, "rouge": 0.31174880363497, "meteor": 0.2865039685636721}
+{"file": "aokvqa-flant5-tags-100.jsonl", "accuracy": 0.5, "bleu": 0.06851184925434736, "rouge": 0.2718947007834597, "meteor": 0.2541451221774978}
+{"file": "aokvqa-flant5-tags-rationale-100.jsonl", "accuracy": 0.52, "bleu": 0.08926210157471544, "rouge": 0.2809486093175898, "meteor": 0.25727714105311206}
+{"file": "aokvqa-flant5-caption-100.jsonl", "accuracy": 0.6, "bleu": 0.07456830935547933, "rouge": 0.2635345709837313, "meteor": 0.2485598500742244}
+{"file": "aokvqa-flant5-caption-rationale-100.jsonl", "accuracy": 0.59, "bleu": 0.07063036668893846, "rouge": 0.2703730147438228, "meteor": 0.25634833971245563}
+{"file": "aokvqa-flant5-both-100.jsonl", "accuracy": 0.62, "bleu": 0.09498541300412207, "rouge": 0.28556301722735955, "meteor": 0.28010304542633724}
+{"file": "aokvqa-flant5-both-rationale-100.jsonl", "accuracy": 0.63, "bleu": 0.0911613134465346, "rouge": 0.2843750366308663, "meteor": 0.27653843136237977}
