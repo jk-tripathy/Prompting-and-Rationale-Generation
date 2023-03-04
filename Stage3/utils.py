@@ -93,20 +93,23 @@ def preproc_okvqa(val_path, image_root, ctx,
         val_jsonl = json.load(f)
 
     if not isFull:
-        val_jsonl = val_jsonl[:train_num+infer_num]
+        val_jsonl = val_jsonl[:train_num + infer_num]
 
     preproc_list = []
     print('Preproc OKVQA')
     for i in tqdm(range(len(val_jsonl)), desc='Loading'):
         temp = {}
-        temp['question_id'] = val_jsonl[i]['question_id']
-        temp['img_id'] = val_jsonl[i]['img_id']
-        temp['question'] = val_jsonl[i]['sent']
-        temp['choices'] = None
-        temp['answer'] = max(val_jsonl[i]['label'], key=val_jsonl[i]['label'].get)
-        temp['rationale'] = val_jsonl[i]['explanation']
+        try:
+            temp['question_id'] = val_jsonl[i]['question_id']
+            temp['img_id'] = val_jsonl[i]['img_id']
+            temp['question'] = val_jsonl[i]['sent']
+            temp['choices'] = None
+            temp['answer'] = max(val_jsonl[i]['label'], key=val_jsonl[i]['label'].get)
+            temp['rationale'] = val_jsonl[i]['explanation']
 
-        preproc_list.append(temp)
+            preproc_list.append(temp)
+        except Exception:
+            continue
 
     if ctx == 'tags':
         preproc_list = gen_tags(preproc_list, image_root, ctx=ctx)
@@ -126,7 +129,7 @@ def preproc_aokvqa(val_path, image_root, ctx,
         val_jsonl = json.load(f)
 
     if not isFull:
-        val_jsonl = val_jsonl[:train_num+infer_num]
+        val_jsonl = val_jsonl[:train_num + infer_num]
 
     preproc_list = []
     print('Preproc AOKVQA')
@@ -158,9 +161,9 @@ def preproc_senmaking(data_paths, train_num=1, infer_num=100, isFull=False):
     rationales = pd.read_csv(data_paths['rat'], header=None)
 
     if not isFull:
-        statements = statements[:train_num+infer_num]
-        answers = answers[:train_num+infer_num]
-        rationales = rationales[:train_num+infer_num]
+        statements = statements[:train_num + infer_num]
+        answers = answers[:train_num + infer_num]
+        rationales = rationales[:train_num + infer_num]
 
     preproc_list = []
     for i in tqdm(range(len(statements)), desc="Preproc SEN-MAKING"):
