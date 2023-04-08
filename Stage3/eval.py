@@ -3,7 +3,7 @@ import json
 from evaluate import load
 
 
-def eval(json_list, file):
+def eval(json_list, file, acc, bleu, rouge, meteor):
     label_preds = []
     label_gold = []
     rationale_preds = []
@@ -16,35 +16,34 @@ def eval(json_list, file):
         rationale_preds.append(res["rationale"])
         rationale_gold.append(res["gold_rationale"])
 
-    acc = load('exact_match')
-    bleu = load('bleu')
-    rouge = load('rouge')
-    meteor = load('meteor')
-
     acc_res = acc.compute(predictions=label_preds, references=label_gold)
     bleu_res = bleu.compute(predictions=rationale_preds, references=rationale_gold)
     rouge_res = rouge.compute(predictions=rationale_preds, references=rationale_gold)
     meteor_res = meteor.compute(predictions=rationale_preds, references=rationale_gold)
 
     return {
-            'file': file,
-            'accuracy': acc_res['exact_match'],
-            'bleu': bleu_res['bleu'],
-            'rouge': rouge_res['rougeL'],
-            'meteor': meteor_res['meteor']
-            }
+        'file': file,
+        'accuracy': acc_res['exact_match'],
+        'bleu': bleu_res['bleu'],
+        'rouge': rouge_res['rougeL'],
+        'meteor': meteor_res['meteor']
+    }
 
 
 if __name__ == "__main__":
-    file_path = 'Stage3/esnli-flant5-100.jsonl'
+    acc = load('exact_match')
+    bleu = load('bleu')
+    rouge = load('rouge')
+    meteor = load('meteor')
 
-    for file in os.listdir('Stage3'):
+    for file in sorted(os.listdir('Stage3/inference/')):
+        print(f'-----Evalutating {file}-----')
         if file.endswith('.jsonl'):
-            path = os.path.join('Stage3', file)
+            path = os.path.join('Stage3/inference/', file)
             with open(path, 'r') as json_file:
                 json_list = list(json_file)
 
-            results = eval(json_list, file)
+            results = eval(json_list, file, acc, bleu, rouge, meteor)
 
             with open('Stage3/results.jsonl', 'a') as f:
                 json.dump(results, f)
