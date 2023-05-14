@@ -6,3 +6,5 @@ Stage2/resnet50_places365.pth.tar
 __pycache__/
 .vscode/
 data/
+Stage3/inference/
+*.zip
