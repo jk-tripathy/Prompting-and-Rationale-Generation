@@ -43,9 +43,9 @@ if __name__ == "__main__":
     data_df = full_df.groupby('dataset')
     datasets = {
         'aokvqa': 'AOKVQA',
+        'senmaking': 'SEN-MAKING',
         'esnli': 'E-SNLI',
         'okvqa': 'OKVQA',
-        'senmaking': 'SEN-MAKING'
     }
     metrics = {
         'accuracy': 'Accuracy',
@@ -61,6 +61,7 @@ if __name__ == "__main__":
         't0pp': 'T0pp'
     }
 
+    '''
     img_full_df = pd.concat([data_df.get_group('aokvqa'), data_df.get_group('okvqa')])
     img_dfs = img_full_df.groupby('dataset')
 
@@ -79,5 +80,19 @@ if __name__ == "__main__":
                     ax[col].set_xticks(range(6))
             ax[-1].legend(loc='center left', bbox_to_anchor=(1, 0.5), fancybox=True, shadow=True)
             plt.savefig(f'plots/{data_key}_{metric}.png')
-    text_full_df = pd.concat([data_df.get_group('esnli'), data_df.get_group('senmaking')])
+    '''
+
+    text_full_df = pd.concat([data_df.get_group('senmaking'), data_df.get_group('esnli')])
     text_dfs = text_full_df.groupby('dataset')
+
+    for data_key in text_dfs.groups.keys():
+        model_dfs = data_df.get_group(data_key).groupby('model')
+        for metric in metrics.keys():
+            print(f'{datasets[data_key]} - {metrics[metric]}')
+            fig, ax = plt.subplots(constrained_layout=True, figsize=(10, 3), nrows=1, ncols=3)
+            for col, model_key in enumerate(model_dfs.groups.keys()):
+                ax[col].title.set_text(f'{models[model_key]}')
+                ax[col].plot(range(6), model_dfs.get_group(model_key)[metric])
+                ax[col].set(xlabel='In-context Samples', ylabel=f'{metrics[metric]}')
+                ax[col].set_xticks(range(6))
+            plt.savefig(f'plots/{data_key}_{metric}.png')
